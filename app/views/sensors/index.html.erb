@@ -1,0 +1,52 @@
+<div id="sensor-dashboard">
+  <h1>Sensor Monitor</h1>
+  <p class="intro">
+    Open this page on your phone and tap <strong>Start Monitoring</strong> to see
+    live readings from its motion, location, and light sensors. Nothing is sent
+    anywhere &mdash; everything runs in your browser.
+  </p>
+
+  <button id="start-monitoring" type="button">Start Monitoring</button>
+  <p id="global-status" class="status"></p>
+
+  <div class="sensor-card" id="card-motion">
+    <h2>Motion</h2>
+    <table>
+      <tr><th colspan="3">Acceleration (m/s&sup2;)</th></tr>
+      <tr><td>x: <span data-field="accel-x">&mdash;</span></td>
+          <td>y: <span data-field="accel-y">&mdash;</span></td>
+          <td>z: <span data-field="accel-z">&mdash;</span></td></tr>
+      <tr><th colspan="3">Rotation Rate (&deg;/s)</th></tr>
+      <tr><td>&alpha;: <span data-field="rotation-alpha">&mdash;</span></td>
+          <td>&beta;: <span data-field="rotation-beta">&mdash;</span></td>
+          <td>&gamma;: <span data-field="rotation-gamma">&mdash;</span></td></tr>
+      <tr><th colspan="3">Orientation (&deg;)</th></tr>
+      <tr><td>&alpha;: <span data-field="orientation-alpha">&mdash;</span></td>
+          <td>&beta;: <span data-field="orientation-beta">&mdash;</span></td>
+          <td>&gamma;: <span data-field="orientation-gamma">&mdash;</span></td></tr>
+    </table>
+    <p class="status" data-status="motion"></p>
+  </div>
+
+  <div class="sensor-card" id="card-location">
+    <h2>Location</h2>
+    <table>
+      <tr><td>Latitude: <span data-field="lat">&mdash;</span></td></tr>
+      <tr><td>Longitude: <span data-field="lon">&mdash;</span></td></tr>
+      <tr><td>Accuracy: <span data-field="accuracy">&mdash;</span> m</td></tr>
+      <tr><td>Altitude: <span data-field="altitude">&mdash;</span></td></tr>
+      <tr><td>Speed: <span data-field="speed">&mdash;</span></td></tr>
+      <tr><td>Heading: <span data-field="heading">&mdash;</span></td></tr>
+    </table>
+    <p class="status" data-status="location"></p>
+  </div>
+
+  <div class="sensor-card" id="card-light">
+    <h2>Light &amp; Proximity</h2>
+    <table>
+      <tr><td>Ambient light: <span data-field="light">&mdash;</span> lux</td></tr>
+      <tr><td>Proximity: <span data-field="proximity">&mdash;</span> cm</td></tr>
+    </table>
+    <p class="status" data-status="light"></p>
+  </div>
+</div>
