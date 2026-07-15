@@ -1,0 +1,19 @@
+{
+  "name": "photo-app",
+  "version": "1.0.0",
+  "description": "Self-hosted app to access, tag, and organize your photos",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "exifr": "^7.1.3",
+    "express": "^4.21.0",
+    "multer": "^2.0.0",
+    "sharp": "^0.33.5"
+  }
+}

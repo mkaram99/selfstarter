@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Photos</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="brand">📷 Photos</div>
+
+      <button id="uploadBtn" class="btn btn-primary">Upload photos</button>
+      <input id="fileInput" type="file" accept="image/*" multiple hidden />
+
+      <nav class="filters">
+        <button class="nav-item active" data-filter="all">All photos</button>
+        <button class="nav-item" data-filter="favorites">★ Favorites</button>
+      </nav>
+
+      <div class="section">
+        <div class="section-header">
+          <span>Albums</span>
+          <button id="newAlbumBtn" class="icon-btn" title="New album">+</button>
+        </div>
+        <ul id="albumList" class="list"></ul>
+      </div>
+
+      <div class="section">
+        <div class="section-header"><span>Tags</span></div>
+        <div id="tagCloud" class="tag-cloud"></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <input id="searchInput" type="search" placeholder="Search by filename…" />
+        <select id="sortSelect">
+          <option value="newest">Newest uploaded</option>
+          <option value="oldest">Oldest uploaded</option>
+          <option value="taken">Date taken</option>
+          <option value="name">Name</option>
+        </select>
+      </header>
+
+      <div id="dropzone" class="dropzone" hidden>
+        <div>Drop photos to upload</div>
+      </div>
+
+      <div id="grid" class="grid"></div>
+      <div id="emptyState" class="empty-state" hidden>
+        <p>No photos yet. Upload some or drag &amp; drop them here.</p>
+      </div>
+    </main>
+  </div>
+
+  <div id="lightbox" class="lightbox" hidden>
+    <div class="lightbox-backdrop"></div>
+    <div class="lightbox-content">
+      <div class="lb-image-wrap">
+        <button id="lbClose" class="icon-btn lb-close">✕</button>
+        <img id="lbImage" alt="" />
+      </div>
+      <div class="lb-panel">
+        <div class="lb-header">
+          <h3 id="lbName"></h3>
+          <button id="lbFavorite" class="icon-btn" title="Toggle favorite">☆</button>
+        </div>
+        <p id="lbMeta" class="lb-meta"></p>
+
+        <div class="lb-block">
+          <label>Tags</label>
+          <div id="lbTags" class="tag-chips"></div>
+          <form id="lbTagForm" class="inline-form">
+            <input id="lbTagInput" type="text" placeholder="Add a tag and press Enter" autocomplete="off" />
+          </form>
+        </div>
+
+        <div class="lb-block">
+          <label>Albums</label>
+          <div id="lbAlbums" class="tag-chips"></div>
+          <select id="lbAlbumSelect">
+            <option value="">Add to album…</option>
+          </select>
+        </div>
+
+        <button id="lbDelete" class="btn btn-danger">Delete photo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
