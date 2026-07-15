@@ -288,6 +288,7 @@
     const taken = photo.takenAt ? new Date(photo.takenAt).toLocaleString() : null;
     const uploaded = new Date(photo.uploadedAt).toLocaleDateString();
     lbMeta.textContent = `${dims}${formatBytes(photo.size)} · ${taken ? `taken ${taken}` : `uploaded ${uploaded}`}`;
+    lbDescription.value = photo.description || '';
 
     lbTags.innerHTML = '';
     for (const tag of photo.tags) {
@@ -374,5 +375,166 @@
     await refreshAll();
   });
 
+  // ---- Description (lightbox) ----
+
+  const lbDescription = $('#lbDescription');
+  const lbDescribeBtn = $('#lbDescribeBtn');
+
+  lbDescription.addEventListener('blur', async () => {
+    const photo = findPhoto(state.activePhotoId);
+    if (!photo || lbDescription.value === (photo.description || '')) return;
+    await api(`/api/photos/${photo.id}`, { method: 'PATCH', body: JSON.stringify({ description: lbDescription.value }) });
+    await loadPhotos();
+  });
+
+  lbDescribeBtn.addEventListener('click', async () => {
+    const photo = findPhoto(state.activePhotoId);
+    if (!photo) return;
+    lbDescribeBtn.disabled = true;
+    lbDescribeBtn.textContent = 'Describing…';
+    try {
+      await api(`/api/photos/${photo.id}/describe`, { method: 'POST' });
+      await loadPhotos();
+      renderLightbox();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      lbDescribeBtn.disabled = false;
+      lbDescribeBtn.textContent = 'Describe with AI';
+    }
+  });
+
+  // ---- Settings & scanning ----
+
+  const settingsModal = $('#settingsModal');
+  const scanBanner = $('#scanBanner');
+  const scanBannerText = $('#scanBannerText');
+  const scanBannerBtn = $('#scanBannerBtn');
+  const apiKeySaved = $('#apiKeySaved');
+  const apiKeyForm = $('#apiKeyForm');
+  const apiKeyInput = $('#apiKeyInput');
+  const modelChoices = $('#modelChoices');
+  const scanStats = $('#scanStats');
+  const settingsScanBtn = $('#settingsScanBtn');
+  const settingsRetryBtn = $('#settingsRetryBtn');
+
+  let settingsInfo = { hasApiKey: false, model: null, models: [] };
+  let scanStatus = { status: 'idle', scanned: 0, errors: 0, total: 0, lastError: null };
+  let scanPollTimer = null;
+
+  function scanBannerLabel() {
+    switch (scanStatus.status) {
+      case 'scanning':
+        return `Describing photos… ${scanStatus.scanned} done${scanStatus.errors ? `, ${scanStatus.errors} failed` : ''}`;
+      case 'paused':
+        return 'Scan paused';
+      case 'done':
+        return `Scan complete — ${scanStatus.scanned} photo${scanStatus.scanned === 1 ? '' : 's'} described`;
+      case 'error':
+        return scanStatus.lastError || 'Scan failed';
+      default:
+        return null;
+    }
+  }
+
+  function renderScanUi() {
+    const isActive = scanStatus.status === 'scanning';
+    const label = scanBannerLabel();
+
+    if (label && (isActive || scanStatus.status === 'paused' || scanStatus.status === 'error')) {
+      scanBanner.hidden = false;
+      scanBannerText.textContent = label;
+      scanBannerBtn.textContent = isActive ? 'Pause' : 'Resume';
+    } else {
+      scanBanner.hidden = true;
+    }
+
+    const undescribed = Math.max(0, (scanStatus.total || 0) - (scanStatus.scanned || 0) - (scanStatus.errors || 0));
+    scanStats.textContent = `${scanStatus.total || 0} photo${scanStatus.total === 1 ? '' : 's'} indexed · ${scanStatus.scanned || 0} described` +
+      (scanStatus.errors ? ` · ${scanStatus.errors} failed` : '') +
+      (undescribed ? ` · ${undescribed} remaining` : '');
+    settingsScanBtn.textContent = isActive ? 'Pause scan' : undescribed ? `Scan ${undescribed} photo${undescribed === 1 ? '' : 's'}` : 'Scan library';
+    settingsRetryBtn.hidden = !scanStatus.errors;
+
+    if (isActive && !scanPollTimer) {
+      scanPollTimer = setInterval(refreshScanStatus, 2000);
+    } else if (!isActive && scanPollTimer) {
+      clearInterval(scanPollTimer);
+      scanPollTimer = null;
+    }
+  }
+
+  async function refreshScanStatus() {
+    scanStatus = await api('/api/scan');
+    renderScanUi();
+    if (scanStatus.status === 'done' || scanStatus.status === 'scanning') loadPhotos();
+  }
+
+  scanBannerBtn.addEventListener('click', async () => {
+    scanStatus = scanStatus.status === 'scanning' ? await api('/api/scan/pause', { method: 'POST' }) : await api('/api/scan', { method: 'POST' });
+    renderScanUi();
+  });
+
+  settingsScanBtn.addEventListener('click', async () => {
+    try {
+      scanStatus = scanStatus.status === 'scanning' ? await api('/api/scan/pause', { method: 'POST' }) : await api('/api/scan', { method: 'POST' });
+      renderScanUi();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+
+  settingsRetryBtn.addEventListener('click', async () => {
+    scanStatus = await api('/api/scan/retry', { method: 'POST' });
+    renderScanUi();
+  });
+
+  function renderModelChoices() {
+    modelChoices.innerHTML = '';
+    for (const model of settingsInfo.models) {
+      const label = document.createElement('label');
+      label.className = 'model-choice';
+      label.innerHTML = `<input type="radio" name="model" value="${model.id}" /> <span></span>`;
+      label.querySelector('input').checked = settingsInfo.model === model.id;
+      label.querySelector('span').textContent = model.label;
+      label.querySelector('input').addEventListener('change', async () => {
+        settingsInfo = await api('/api/settings', { method: 'POST', body: JSON.stringify({ model: model.id }) });
+      });
+      modelChoices.appendChild(label);
+    }
+  }
+
+  async function loadSettings() {
+    settingsInfo = await api('/api/settings');
+    apiKeySaved.hidden = !settingsInfo.hasApiKey;
+    apiKeyForm.hidden = settingsInfo.hasApiKey;
+    renderModelChoices();
+  }
+
+  $('#settingsBtn').addEventListener('click', async () => {
+    await Promise.all([loadSettings(), refreshScanStatus()]);
+    settingsModal.hidden = false;
+  });
+  $('#settingsClose').addEventListener('click', () => (settingsModal.hidden = true));
+  settingsModal.querySelector('.lightbox-backdrop').addEventListener('click', () => (settingsModal.hidden = true));
+
+  apiKeyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = apiKeyInput.value.trim();
+    if (!value) return;
+    settingsInfo = await api('/api/settings', { method: 'POST', body: JSON.stringify({ apiKey: value }) });
+    apiKeyInput.value = '';
+    apiKeySaved.hidden = !settingsInfo.hasApiKey;
+    apiKeyForm.hidden = settingsInfo.hasApiKey;
+  });
+
+  $('#apiKeyRemove').addEventListener('click', async () => {
+    await api('/api/settings/api-key', { method: 'DELETE' });
+    settingsInfo.hasApiKey = false;
+    apiKeySaved.hidden = true;
+    apiKeyForm.hidden = false;
+  });
+
   refreshAll();
+  refreshScanStatus();
 })();

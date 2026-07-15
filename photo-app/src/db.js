@@ -20,7 +20,15 @@ db.exec(`
     height INTEGER,
     taken_at TEXT,
     uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
-    favorite INTEGER NOT NULL DEFAULT 0
+    favorite INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    scanned_at TEXT,
+    scan_error TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
   );
 
   CREATE TABLE IF NOT EXISTS tags (

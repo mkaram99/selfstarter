@@ -8,6 +8,8 @@ const exifr = require('exifr');
 
 const db = require('./db');
 const { serializePhoto, getOrCreateTag } = require('./repo');
+const settings = require('./settings');
+const scanner = require('./scanner');
 
 const STORAGE_DIR = path.join(__dirname, '..', 'storage');
 const THUMB_DIR = path.join(__dirname, '..', 'storage', '_thumbs');
@@ -46,6 +48,9 @@ const insertPhoto = db.prepare(`
 const getPhotoById = db.prepare('SELECT * FROM photos WHERE id = ?');
 const deletePhotoStmt = db.prepare('DELETE FROM photos WHERE id = ?');
 const setFavoriteStmt = db.prepare('UPDATE photos SET favorite = ? WHERE id = ?');
+const setDescriptionManualStmt = db.prepare(
+  `UPDATE photos SET description = ?, scanned_at = datetime('now') WHERE id = ?`
+);
 const linkTag = db.prepare('INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)');
 const unlinkTagByName = db.prepare(`
   DELETE FROM photo_tags WHERE photo_id = ? AND tag_id = (SELECT id FROM tags WHERE name = ?)
@@ -121,7 +126,7 @@ app.get('/api/photos', (req, res) => {
     clauses.push('p.favorite = 1');
   }
   if (q) {
-    clauses.push('p.original_name LIKE @q');
+    clauses.push('(p.original_name LIKE @q OR p.description LIKE @q)');
     params.q = `%${q}%`;
   }
   if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ');
@@ -149,6 +154,9 @@ app.patch('/api/photos/:id', (req, res) => {
   if (!photo) return res.status(404).json({ error: 'Not found' });
   if (typeof req.body.favorite === 'boolean') {
     setFavoriteStmt.run(req.body.favorite ? 1 : 0, photo.id);
+  }
+  if (typeof req.body.description === 'string') {
+    setDescriptionManualStmt.run(req.body.description.trim(), photo.id);
   }
   res.json({ photo: serializePhoto(getPhotoById.get(photo.id)) });
 });
@@ -246,6 +254,69 @@ app.delete('/api/albums/:id/photos/:photoId', (req, res) => {
   db.prepare('DELETE FROM album_photos WHERE album_id = ? AND photo_id = ?').run(req.params.id, req.params.photoId);
   const photo = getPhotoById.get(req.params.photoId);
   res.json({ photo: photo ? serializePhoto(photo) : null });
+});
+
+// ---- Settings ----
+
+app.get('/api/settings', (req, res) => {
+  res.json({
+    hasApiKey: !!settings.getApiKey(),
+    model: settings.getModel(),
+    models: settings.MODELS,
+  });
+});
+
+app.post('/api/settings', (req, res) => {
+  if (typeof req.body.apiKey === 'string' && req.body.apiKey.trim()) {
+    settings.setApiKey(req.body.apiKey.trim());
+  }
+  if (typeof req.body.model === 'string' && settings.MODELS.some((m) => m.id === req.body.model)) {
+    settings.setModel(req.body.model);
+  }
+  res.json({
+    hasApiKey: !!settings.getApiKey(),
+    model: settings.getModel(),
+    models: settings.MODELS,
+  });
+});
+
+app.delete('/api/settings/api-key', (req, res) => {
+  settings.setApiKey(null);
+  res.json({ hasApiKey: false });
+});
+
+// ---- Scan ----
+
+app.get('/api/scan', (req, res) => {
+  res.json(scanner.getStatus());
+});
+
+app.post('/api/scan', (req, res) => {
+  res.json(scanner.start());
+});
+
+app.post('/api/scan/pause', (req, res) => {
+  scanner.pause();
+  res.json(scanner.getStatus());
+});
+
+app.post('/api/scan/retry', (req, res) => {
+  res.json(scanner.retryErrors());
+});
+
+app.post('/api/photos/:id/describe', async (req, res) => {
+  const photo = getPhotoById.get(req.params.id);
+  if (!photo) return res.status(404).json({ error: 'Not found' });
+
+  const apiKey = settings.getApiKey();
+  if (!apiKey) return res.status(400).json({ error: 'Add an Anthropic API key in Settings first.' });
+
+  try {
+    await scanner.describeOnePhoto(photo.id, photo.filename, apiKey, settings.getModel());
+    res.json({ photo: serializePhoto(getPhotoById.get(photo.id)) });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
 });
 
 app.use((err, req, res, next) => {

@@ -9,7 +9,10 @@
 <body>
   <div id="app">
     <aside class="sidebar">
-      <div class="brand">📷 Photos</div>
+      <div class="brand-row">
+        <div class="brand">📷 Photos</div>
+        <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
+      </div>
 
       <button id="uploadBtn" class="btn btn-primary">Upload photos</button>
       <input id="fileInput" type="file" accept="image/*" multiple hidden />
@@ -35,7 +38,7 @@
 
     <main class="main">
       <header class="topbar">
-        <input id="searchInput" type="search" placeholder="Search by filename…" />
+        <input id="searchInput" type="search" placeholder="Search by filename or content, e.g. “dog at the beach”…" />
         <select id="sortSelect">
           <option value="newest">Newest uploaded</option>
           <option value="oldest">Oldest uploaded</option>
@@ -43,6 +46,11 @@
           <option value="name">Name</option>
         </select>
       </header>
+
+      <div id="scanBanner" class="scan-banner" hidden>
+        <span id="scanBannerText" class="scan-banner-text"></span>
+        <button id="scanBannerBtn" class="btn btn-small"></button>
+      </div>
 
       <div id="dropzone" class="dropzone" hidden>
         <div>Drop photos to upload</div>
@@ -53,6 +61,43 @@
         <p>No photos yet. Upload some or drag &amp; drop them here.</p>
       </div>
     </main>
+  </div>
+
+  <div id="settingsModal" class="lightbox" hidden>
+    <div class="lightbox-backdrop"></div>
+    <div class="settings-content">
+      <div class="lb-header">
+        <h3>Settings</h3>
+        <button id="settingsClose" class="icon-btn">✕</button>
+      </div>
+
+      <div class="lb-block">
+        <label>Anthropic API key</label>
+        <p class="help-text">Used to generate searchable descriptions of your photos. Stored locally in this app's database, never sent anywhere except to Anthropic.</p>
+        <div id="apiKeySaved" class="inline-form" hidden>
+          <span class="key-status">● Key saved</span>
+          <button id="apiKeyRemove" class="link-danger">Remove</button>
+        </div>
+        <form id="apiKeyForm" class="inline-form row-form">
+          <input id="apiKeyInput" type="password" placeholder="sk-ant-…" autocomplete="off" />
+          <button type="submit" class="btn btn-small">Save</button>
+        </form>
+      </div>
+
+      <div class="lb-block">
+        <label>Description model</label>
+        <div id="modelChoices"></div>
+      </div>
+
+      <div class="lb-block">
+        <label>Scan</label>
+        <p id="scanStats" class="help-text"></p>
+        <div class="row-form">
+          <button id="settingsScanBtn" class="btn btn-primary"></button>
+          <button id="settingsRetryBtn" class="link-danger" hidden>Retry failed</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="lightbox" class="lightbox" hidden>
@@ -68,6 +113,14 @@
           <button id="lbFavorite" class="icon-btn" title="Toggle favorite">☆</button>
         </div>
         <p id="lbMeta" class="lb-meta"></p>
+
+        <div class="lb-block">
+          <div class="lb-block-header">
+            <label>Description</label>
+            <button id="lbDescribeBtn" class="link-btn">Describe with AI</button>
+          </div>
+          <textarea id="lbDescription" class="description-input" rows="3" placeholder="No description yet."></textarea>
+        </div>
 
         <div class="lb-block">
           <label>Tags</label>
