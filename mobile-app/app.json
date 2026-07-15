@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Photo Search",
+    "slug": "mobile-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Photo Search reads your photos on-device to build a searchable index. Photos are never uploaded anywhere except as a resized copy sent to the AI provider you configure, solely to generate a text description for search."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Photo Search reads your photos on-device to build a searchable index.",
+          "savePhotosPermission": "Photo Search does not need to save photos, but the system requires this permission string.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ]
+  }
+}
