@@ -100,4 +100,10 @@ Amazon Payments works great for us, but it may not work out for everyone. If you
 
 There aren't any tests yet. Tests are very welcome!
 
+## Quantum Magnifier
 
+`public/quantum` holds a self-contained augmented-reality instrument that
+magnifies the camera view down through molecules, atoms, nuclei and quarks to
+the vacuum, translating what the camera measures into the fields underneath. It
+has no build step and no dependencies; visit `/quantum` with the app running, or
+open `public/quantum/index.html` directly. See `public/quantum/README.md`.

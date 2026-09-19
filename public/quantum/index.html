@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#05070d">
+<meta name="description" content="An augmented-reality instrument that magnifies the scene in front of the camera down through molecules, atoms, nuclei and quarks to the vacuum, translating what it sees into the fields underneath.">
+<title>Quantum Magnifier</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='3' fill='%237ee0ff'/%3E%3Cellipse cx='16' cy='16' rx='14' ry='6' fill='none' stroke='%237ee0ff' stroke-width='1.5'/%3E%3Cellipse cx='16' cy='16' rx='14' ry='6' fill='none' stroke='%23b98cff' stroke-width='1.5' transform='rotate(60 16 16)'/%3E%3Cellipse cx='16' cy='16' rx='14' ry='6' fill='none' stroke='%23ffd16b' stroke-width='1.5' transform='rotate(120 16 16)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<video id="video" playsinline muted autoplay></video>
+<canvas id="stage"></canvas>
+
+<div id="banner">
+  <div class="banner-line">
+    <span id="regime-name">Ambient</span>
+    <span id="mag-badge">&times;&nbsp;1.0</span>
+  </div>
+  <div id="regime-tag">the world as it is</div>
+  <div id="regime-note">Unmagnified passthrough.</div>
+</div>
+
+<aside id="panel">
+  <div id="readouts"></div>
+  <div id="sourcelabel">standby</div>
+</aside>
+
+<div id="controls">
+  <div id="layerchips"></div>
+  <div id="dial-wrap">
+    <div id="dial-ticks"></div>
+    <input id="dial" type="range" aria-label="Magnification">
+  </div>
+  <div id="buttons">
+    <button id="btn-pause" type="button">Freeze</button>
+    <button id="btn-flip" type="button">Flip</button>
+    <button id="btn-shot" type="button">Capture</button>
+    <button id="btn-panel" type="button" class="on">Readout</button>
+    <button id="btn-about" type="button">?</button>
+  </div>
+</div>
+
+<div id="intro">
+  <div class="sheet">
+    <h1>Quantum Magnifier</h1>
+    <p class="lede">
+      Point it at something ordinary. The instrument keeps magnifying past the
+      point where there is anything left to see, and draws what is there
+      instead: photons, bonds, probability, colour charge, and finally the
+      vacuum the whole thing is standing on.
+    </p>
+    <p class="fine">
+      It needs your camera to read the scene. Nothing leaves this device &mdash;
+      the video never goes anywhere, and the whole instrument runs offline in
+      this page. Without a camera it falls back to a simulated specimen.
+    </p>
+    <button id="begin" type="button">Open the aperture</button>
+    <p id="intro-status" class="fine dim">pinch or scroll to magnify &middot; tap to move the probe</p>
+  </div>
+</div>
+
+<div id="about" class="hidden">
+  <div class="sheet">
+    <button id="about-close" type="button" aria-label="Close">&times;</button>
+    <h2>What is being measured, and what is a convention</h2>
+    <p>
+      A camera measures light, not matter. Everything derived from light here
+      is a real calculation on real data; everything about composition is a
+      stated convention, applied consistently so that the same object always
+      reads the same way.
+    </p>
+    <h3>Measured, then computed</h3>
+    <ul>
+      <li><b>Luminance &rarr; irradiance</b>, anchored to 1&nbsp;W/m&sup2; for a lit scene, giving photon flux, field amplitude <i>&radic;(2I/c&epsilon;<sub>0</sub>)</i> and energy density <i>I/c</i>.</li>
+      <li><b>Hue &rarr; dominant wavelength</b>, and from it photon energy <i>hc/&lambda;</i> and the electron de Broglie length <i>h/&radic;(2mE)</i>.</li>
+      <li><b>Luminance gradient &rarr; field direction.</b> The field lines over the scene are streamlines of that gradient.</li>
+      <li><b>Frame-to-frame change &rarr; agitation</b>, driving thermal amplitude and the decoherence term.</li>
+      <li><b>Magnification &rarr; &Delta;x</b>, the real size of one screen pixel, which sets the momentum bound <i>&Delta;p &ge; &#8463;/2&Delta;x</i>.</li>
+    </ul>
+    <h3>Drawn to scale</h3>
+    <ul>
+      <li>Orbital clouds are sampled from hydrogenic |&psi;|&sup2; &mdash; &Gamma;(3, a<sub>0</sub>/2) for 1s, &Gamma;(5, a<sub>0</sub>) for 2p, &Gamma;(7, 3a<sub>0</sub>/2) for 3d &mdash; scaled by the Slater effective charge. Each dot is one possible measurement, not a particle.</li>
+      <li>Nuclear radius is 1.2&nbsp;fm&nbsp;&times;&nbsp;A<sup>1/3</sup>, nucleons uniform in the ball. The proton is drawn at its 0.84&nbsp;fm charge radius.</li>
+      <li>Bond lengths, Bohr radii and nucleon sizes are all rendered at the dial's current metres-per-pixel, so the jumps between rungs are the real ones.</li>
+    </ul>
+    <h3>Convention, not measurement</h3>
+    <ul>
+      <li><b>Colour &rarr; element.</b> Red reads as oxygen, blue as nitrogen, green and grey as carbon, white as hydrogen, yellow as sulfur, orange as phosphorus, violet as iron. A camera cannot see elements; this is a mapping.</li>
+      <li><b>Pixel RGB &rarr; colour charge.</b> At the partonic rung the three channels weight the three colour charges. The pun is deliberate; the physics of confinement drawn around it is not.</li>
+      <li><b>Time.</b> Light crosses a micrometre in femtoseconds. The display clock is slowed by the factor shown in the readout so that transport is visible at all.</li>
+    </ul>
+    <h3>Keys</h3>
+    <p class="keys">
+      <b>+ &minus;</b> magnify &middot; <b>1&ndash;9</b> jump to a rung &middot;
+      <b>space</b> freeze &middot; <b>f</b> flip camera &middot;
+      <b>s</b> capture &middot; <b>p</b> readout &middot; <b>r</b> recentre probe
+    </p>
+  </div>
+</div>
+
+<script src="js/constants.js"></script>
+<script src="js/scales.js"></script>
+<script src="js/camera.js"></script>
+<script src="js/field.js"></script>
+<script src="js/render.js"></script>
+<script src="js/layers/matter.js"></script>
+<script src="js/layers/quantum.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
