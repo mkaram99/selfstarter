@@ -639,7 +639,22 @@
     }
   };
 
+  /*
+   * The instrument is self-contained, so once it has arrived it should keep
+   * working without a network. The manifest link is what distinguishes the
+   * standalone copy from an embedded one, where a worker has no business
+   * being registered.
+   */
+  function registerWorker() {
+    if (!document.querySelector('link[rel="manifest"]')) return;
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    } catch (e) { /* blocked by the host; the page works regardless */ }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     window.app = new App();
+    registerWorker();
   });
 })(window.QM = window.QM || {});

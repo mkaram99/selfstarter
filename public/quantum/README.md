@@ -108,6 +108,18 @@ lens.
 `+` `−` sweep · `1`–`9` jump to a rung · `[` `]` aperture · `space` freeze ·
 `f` flip camera · `s` capture a PNG · `p` readout · `r` recentre the lens
 
+## Installing it on a phone
+
+Served over HTTPS (or from `localhost`), it is a self-contained installable app:
+a web manifest, a maskable icon set, and a service worker that precaches the
+whole shell. Open it in the phone's browser and use *Add to Home Screen* — it
+then launches full-screen, with no browser chrome, and keeps working with no
+network, which is what you want from something you carry around pointing at
+things.
+
+The camera needs a secure context, so a laptop serving over plain `http://` to a
+LAN address will not get it. GitHub Pages, or any static HTTPS host, will.
+
 ## Privacy
 
 The camera stream is read into a canvas in the page and never leaves the device.
@@ -131,6 +143,9 @@ js/layers/matter.js   field lines, photons, cells, wavefronts, molecules
 js/layers/quantum.js  orbitals, nucleus, quarks, vacuum
 js/hud.js             the readout
 js/app.js             lens, camera, dial, render loop, adaptive quality
+manifest.webmanifest  installable-app metadata
+sw.js                 offline shell: precaches everything above
+icon.svg              master icon; the PNGs beside it are rendered from it
 ```
 
 Layers register by name and draw with a weight the dial sets, so adding a rung
