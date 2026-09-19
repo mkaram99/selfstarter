@@ -32,7 +32,11 @@
   <div id="layerchips"></div>
   <div id="dial-wrap">
     <div id="dial-ticks"></div>
-    <input id="dial" type="range" aria-label="Magnification">
+    <input id="dial" type="range" aria-label="Magnification and drive frequency">
+    <div id="aperture-row">
+      <label for="aperture">Aperture</label>
+      <input id="aperture" type="range" min="0.07" max="0.45" step="0.005" aria-label="Aperture">
+    </div>
   </div>
   <div id="buttons">
     <button id="btn-pause" type="button">Freeze</button>
@@ -47,10 +51,17 @@
   <div class="sheet">
     <h1>Quantum Magnifier</h1>
     <p class="lede">
-      Point it at something ordinary. The instrument keeps magnifying past the
-      point where there is anything left to see, and draws what is there
-      instead: photons, bonds, probability, colour charge, and finally the
-      vacuum the whole thing is standing on.
+      A lens you hold against the world. Aim it at something and it finds the
+      object under the aperture, takes that object&rsquo;s own outline as the
+      boundary of a vibrating membrane, and draws the standing wave it would
+      carry &mdash; with the structure underneath layered into the same
+      silhouette.
+    </p>
+    <p class="fine">
+      Chladni figures and electron orbitals are the same mathematics: standing
+      waves of a wave equation under boundary conditions, with nodes where the
+      amplitude stays at zero. So the figure is not decoration over the
+      physics. It is the physics, at a scale you can point at.
     </p>
     <p class="fine">
       It needs your camera to read the scene. Nothing leaves this device &mdash;
@@ -58,7 +69,7 @@
       this page. Without a camera it falls back to a simulated specimen.
     </p>
     <button id="begin" type="button">Open the aperture</button>
-    <p id="intro-status" class="fine dim">pinch or scroll to magnify &middot; tap to move the probe</p>
+    <p id="intro-status" class="fine dim">drag to aim &middot; pinch or scroll to sweep the frequency</p>
   </div>
 </div>
 
@@ -79,7 +90,26 @@
       <li><b>Luminance gradient &rarr; field direction.</b> The field lines over the scene are streamlines of that gradient.</li>
       <li><b>Frame-to-frame change &rarr; agitation</b>, driving thermal amplitude and the decoherence term.</li>
       <li><b>Magnification &rarr; &Delta;x</b>, the real size of one screen pixel, which sets the momentum bound <i>&Delta;p &ge; &#8463;/2&Delta;x</i>.</li>
+      <li><b>Region growth &rarr; the object.</b> A flood outward from the centre of the aperture, stopped by colour difference and by the scene&rsquo;s own edges, gives the silhouette, its area and perimeter, and its angular symmetry as a Fourier series on the outline.</li>
     </ul>
+    <h3>The membrane</h3>
+    <p>
+      The figure inside the lens is a damped wave equation
+      <i>u<sub>tt</sub> + &gamma;u<sub>t</sub> = c&sup2;&nabla;&sup2;u</i>
+      solved on a grid clipped to that silhouette and driven at a frequency the
+      dial sets. Bright filaments are the nodes &mdash; where sand collects on
+      a real Chladni plate, because that is where the plate is not moving.
+      The object&rsquo;s shape is the boundary condition, so two different
+      things under the same aperture at the same frequency give different
+      figures, for the same reason two differently cut plates do.
+    </p>
+    <p>
+      Damping comes from how much the object is moving and how textured it is,
+      so a still smooth surface rings cleanly and a busy one smears. The fold
+      count of the harmonic line-work is measured from the outline, never
+      chosen; a smooth blob scores almost nothing and the figure stays plain,
+      which is the honest result.
+    </p>
     <h3>Drawn to scale</h3>
     <ul>
       <li>Orbital clouds are sampled from hydrogenic |&psi;|&sup2; &mdash; &Gamma;(3, a<sub>0</sub>/2) for 1s, &Gamma;(5, a<sub>0</sub>) for 2p, &Gamma;(7, 3a<sub>0</sub>/2) for 3d &mdash; scaled by the Slater effective charge. Each dot is one possible measurement, not a particle.</li>
@@ -94,9 +124,10 @@
     </ul>
     <h3>Keys</h3>
     <p class="keys">
-      <b>+ &minus;</b> magnify &middot; <b>1&ndash;9</b> jump to a rung &middot;
-      <b>space</b> freeze &middot; <b>f</b> flip camera &middot;
-      <b>s</b> capture &middot; <b>p</b> readout &middot; <b>r</b> recentre probe
+      <b>+ &minus;</b> sweep &middot; <b>1&ndash;9</b> jump to a rung &middot;
+      <b>[ ]</b> aperture &middot; <b>space</b> freeze &middot;
+      <b>f</b> flip camera &middot; <b>s</b> capture &middot;
+      <b>p</b> readout &middot; <b>r</b> recentre lens
     </p>
   </div>
 </div>
@@ -106,8 +137,11 @@
 <script src="js/camera.js"></script>
 <script src="js/field.js"></script>
 <script src="js/render.js"></script>
+<script src="js/segment.js"></script>
+<script src="js/resonance.js"></script>
 <script src="js/layers/matter.js"></script>
 <script src="js/layers/quantum.js"></script>
+<script src="js/layers/cymatic.js"></script>
 <script src="js/hud.js"></script>
 <script src="js/app.js"></script>
 </body>

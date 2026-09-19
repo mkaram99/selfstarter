@@ -44,6 +44,47 @@
       ]
     },
     {
+      title: 'Object under the lens',
+      rows: [
+        { key: 'objfound', label: 'Locked on', calc: function (s) {
+            if (!s.object.found) return 'searching\u2026';
+            if (s.object.synthetic) return 'aperture (nothing separable)';
+            return (s.object.fill * 100).toFixed(0) + '% of the aperture';
+          } },
+        { key: 'objsym', label: 'Symmetry', calc: function (s) {
+            if (!s.object.found || s.object.symmetryStrength < 0.06) return 'none measured';
+            return s.object.symmetry + '-fold \u00b7 ' + (s.object.symmetryStrength * 100).toFixed(0) + '%';
+          } },
+        { key: 'objround', label: 'Compactness', calc: function (s) {
+            return s.object.found ? (s.object.compactness * 100).toFixed(0) + '% of a circle' : '\u2014';
+          } },
+        { key: 'objrough', label: 'Edge roughness', calc: function (s) {
+            return s.object.found ? (s.object.roughness * 100).toFixed(0) + '%' : '\u2014';
+          } }
+      ]
+    },
+    {
+      title: 'Resonance',
+      rows: [
+        { key: 'resnodes', label: 'Nodes across', calc: function (s) {
+            var r = s.resonance;
+            if (!s.object.found || !r.insideCells) return '\u2014';
+            return (r.n / r.wavelength).toFixed(1);
+          } },
+        { key: 'resspace', label: 'Nodal spacing', calc: function (s) {
+            var r = s.resonance;
+            if (!s.object.found || !r.insideCells) return '\u2014';
+            // The membrane spans the aperture, so a wavelength in grid
+            // cells maps straight onto the real field of view.
+            return si((r.wavelength / r.n) * (s.lens.r * 2) * s.view.fov, 'm');
+          } },
+        { key: 'reslock', label: 'Mode lock', calc: function (s) {
+            if (!s.object.found || !s.resonance.insideCells) return '\u2014';
+            return (s.resonance.lock * 100).toFixed(0) + '%';
+          } }
+      ]
+    },
+    {
       title: 'Limits',
       rows: [
         { key: 'dp', label: 'Δp c ≥ ħc/2Δx', calc: function (s) { return si(s.probe.dpc, 'eV'); } },

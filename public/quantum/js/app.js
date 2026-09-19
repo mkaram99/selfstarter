@@ -1,10 +1,15 @@
 /*
  * The instrument.
  *
- * Holds the camera, the translated field, the magnification dial and the
- * render loop, and decides how much of the physical image survives at each
- * depth: at the top the world is untouched, at the bottom there is nothing
- * left of it but the fields it is made of.
+ * A lens you aim. The world stays where it is; inside the aperture the
+ * instrument finds whatever object is under it, takes that object's outline
+ * as a boundary condition, and draws the standing wave it would carry --
+ * with the deeper structure layered into the same silhouette.
+ *
+ * The dial is a frequency sweep as much as a magnification: further down
+ * means shorter wavelength, more nodes, finer structure. That is one
+ * statement in two languages, which is the reason the two halves of this
+ * thing fit together at all.
  */
 (function (QM) {
   'use strict';
@@ -13,6 +18,8 @@
   var CSS_PX_METRES = 0.0002646;   // 1 CSS pixel at the nominal 96 dpi
 
   var LAYER_NAMES = {
+    cymatic: 'Figure',
+    harmonics: 'Harmonics',
     fieldlines: 'Field lines',
     photons: 'Photons',
     cells: 'Cells',
@@ -28,8 +35,10 @@
     this.canvas = document.getElementById('stage');
     this.ctx = this.canvas.getContext('2d');
     this.video = document.getElementById('video');
-    this.field = new QM.Field(64);
+    this.field = new QM.Field(96);
     this.hud = new QM.Hud(document.getElementById('readouts'));
+    this.segment = new QM.Segment();
+    this.resonance = new QM.Resonance(128);
 
     this.source = new QM.SyntheticSource();
     this.position = 0;
@@ -37,8 +46,9 @@
     this.paused = false;
     this.quality = 1;
     this.disabled = {};
-    this.probeUV = { u: 0.5, v: 0.5 };
-    this.probeLocked = false;
+    // The aperture, in units of the frame width. Everything the instrument
+    // claims to know is measured inside it.
+    this.lens = { u: 0.5, v: 0.5, r: 0.2, box: { x: 0, y: 0, size: 1 } };
     this.lastFrame = performance.now();
     this.fpsAvg = 60;
     this.view = { w: 1, h: 1, dpr: 1, fov: 1, mpp: 1, quality: 1 };
@@ -184,13 +194,14 @@
       self.nudge(e.deltaY * 0.0022);
     }, { passive: false });
 
-    // Pinch to magnify, tap to move the probe.
+    // Drag to aim the lens, pinch to magnify.
     var pointers = {};
     var pinchStart = null;
     this.canvas.addEventListener('pointerdown', function (e) {
       self.canvas.setPointerCapture(e.pointerId);
-      pointers[e.pointerId] = { x: e.clientX, y: e.clientY, moved: false };
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
       var ids = Object.keys(pointers);
+      if (ids.length === 1) self.aimAt(e.clientX, e.clientY);
       if (ids.length === 2) {
         pinchStart = { dist: pointerDistance(pointers, ids), pos: self.target };
       }
@@ -198,7 +209,6 @@
     this.canvas.addEventListener('pointermove', function (e) {
       var p = pointers[e.pointerId];
       if (!p) return;
-      if (Math.abs(e.clientX - p.x) + Math.abs(e.clientY - p.y) > 6) p.moved = true;
       p.x = e.clientX; p.y = e.clientY;
       var ids = Object.keys(pointers);
       if (ids.length === 2 && pinchStart) {
@@ -207,16 +217,22 @@
           // Each doubling of the pinch is a step down the ladder.
           self.setTarget(pinchStart.pos + Math.log(d / pinchStart.dist) / Math.LN2 * 1.1);
         }
+      } else if (ids.length === 1) {
+        self.aimAt(e.clientX, e.clientY);
       }
     });
     function release(e) {
-      var p = pointers[e.pointerId];
       delete pointers[e.pointerId];
       if (Object.keys(pointers).length < 2) pinchStart = null;
-      if (p && !p.moved) self.probeAt(e.clientX, e.clientY);
     }
     this.canvas.addEventListener('pointerup', release);
-    this.canvas.addEventListener('pointercancel', function (e) { delete pointers[e.pointerId]; });
+    this.canvas.addEventListener('pointercancel', release);
+
+    var aperture = document.getElementById('aperture');
+    aperture.addEventListener('input', function () {
+      self.lens.r = parseFloat(aperture.value);
+    });
+    aperture.value = this.lens.r;
 
     document.getElementById('btn-flip').addEventListener('click', function () { self.flipCamera(); });
     document.getElementById('btn-pause').addEventListener('click', function () {
@@ -248,7 +264,9 @@
         case 'p': document.getElementById('btn-panel').click(); break;
         case 'f': self.flipCamera(); break;
         case 's': self.snapshot(); break;
-        case 'r': self.probeLocked = false; self.probeUV = { u: 0.5, v: 0.5 }; break;
+        case 'r': self.lens.u = 0.5; self.lens.v = 0.5; break;
+        case '[': self.setAperture(self.lens.r - 0.02); break;
+        case ']': self.setAperture(self.lens.r + 0.02); break;
         case 'Escape': document.getElementById('about').classList.add('hidden'); break;
         default:
           if (e.key >= '1' && e.key <= '9') self.setTarget(parseInt(e.key, 10) - 1);
@@ -261,19 +279,18 @@
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
-  App.prototype.probeAt = function (clientX, clientY) {
+  App.prototype.aimAt = function (clientX, clientY) {
     var rect = this.canvas.getBoundingClientRect();
     var u = (clientX - rect.left) / rect.width;
     var v = (clientY - rect.top) / rect.height;
-    if (u < 0 || u > 1 || v < 0 || v > 1) return;
-    var atCentre = Math.abs(u - 0.5) < 0.04 && Math.abs(v - 0.5) < 0.04;
-    if (this.probeLocked && atCentre) {
-      this.probeLocked = false;
-      this.probeUV = { u: 0.5, v: 0.5 };
-    } else {
-      this.probeUV = { u: u, v: v };
-      this.probeLocked = true;
-    }
+    this.lens.u = U.clamp(u, 0, 1);
+    this.lens.v = U.clamp(v, 0, 1);
+  };
+
+  App.prototype.setAperture = function (r) {
+    this.lens.r = U.clamp(r, 0.07, 0.45);
+    var slider = document.getElementById('aperture');
+    if (slider) slider.value = this.lens.r;
   };
 
   App.prototype.buildTicks = function () {
@@ -349,9 +366,15 @@
     this.position += (this.target - this.position) * Math.min(1, dt * 7);
 
     var view = this.view;
+    var lens = this.lens;
     var state = scales.stateFromPosition(this.position);
+    var aspectY = view.h / view.w;
     view.fov = state.fov;
     view.mpp = state.fov / view.w;
+
+    lens.box.size = lens.r * 2 * view.w;
+    lens.box.x = lens.u * view.w - lens.r * view.w;
+    lens.box.y = lens.v * view.h - lens.r * view.w;
 
     // The scene is re-read at about 30 Hz. Pulling a video frame through a
     // canvas is the most expensive thing in the loop, and the overlay
@@ -359,125 +382,186 @@
     if (!this.paused && now - (this.lastFieldRead || 0) >= 32) {
       this.lastFieldRead = now;
       this.field.update(this.source, view.w / view.h);
+      this.segment.update(this.field, lens, aspectY);
     }
 
-    var probe = this.field.probe(this.probeUV.u, this.probeUV.v, view.mpp);
+    this.runResonance(state, dt);
+
+    var probe = this.field.probe(lens.u, lens.v, view.mpp);
     var element = U.elementFor(probe.hue, probe.sat, probe.lum);
 
     var ctx = this.ctx;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, view.w, view.h);
-    this.drawPassthrough(ctx, state);
 
-    var weights = scales.layerWeights(state);
+    // The world, untouched. The instrument is a thing held up against it,
+    // not a replacement for it.
+    this.drawWorld(ctx);
+
     var frame = {
       field: this.field,
       view: view,
+      lens: lens,
+      aspectY: aspectY,
+      segment: this.segment,
+      resonance: this.resonance,
       t: now / 1000,
       dt: this.paused ? 0 : dt,
       weight: 1,
       probe: probe,
       element: element,
       state: state,
-      weights: weights
+      weights: scales.layerWeights(state)
     };
 
-    var order = ['fieldlines', 'waves', 'cells', 'molecules', 'orbitals', 'nucleus', 'quarks', 'vacuum', 'photons'];
-    for (var i = 0; i < order.length; i++) {
-      var id = order[i];
-      var w = weights[id];
-      if (!w || w < 0.012 || this.disabled[id]) continue;
-      var layer = QM.layers.get(id);
-      if (!layer) continue;
-      frame.weight = w;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(lens.u * view.w, lens.v * view.h, lens.r * view.w, 0, Math.PI * 2);
+    ctx.clip();
+    this.drawLensInterior(ctx, frame, state);
+    ctx.restore();
+
+    this.drawLensChrome(ctx, frame);
+    this.updateChrome(state, probe, element, now);
+  };
+
+  /* Everything inside the aperture. */
+  App.prototype.drawLensInterior = function (ctx, frame, state) {
+    var view = this.view, lens = this.lens;
+    var depth = state.position / scales.maxPosition;
+
+    // The world stays where it is outside the rim. Inside, the glass goes
+    // dark so the figure can be read -- an eyepiece, not a tinted window.
+    ctx.fillStyle = 'rgba(5,7,14,' + (0.72 + depth * 0.22).toFixed(3) + ')';
+    ctx.fillRect(lens.box.x - 4, lens.box.y - 4, lens.box.size + 8, lens.box.size + 8);
+
+    this.drawLayer(ctx, frame, 'cymatic', 1);
+
+    // The structural layers belong to the object, so they are cut to its
+    // silhouette rather than filling the aperture.
+    var clip = this.objectPath(frame);
+    if (clip) {
       ctx.save();
-      try {
-        layer.draw(ctx, frame);
-      } catch (err) {
-        // One bad layer should cost its own pass, not the rest of the frame.
-        this.disabled[id] = true;
-        if (this['chip_' + id]) this['chip_' + id].classList.remove('on');
-        this.setSourceLabel(LAYER_NAMES[id] + ' layer disabled: ' + err.message);
-        if (window.console) console.error('layer ' + id + ' failed', err);
+      ctx.clip(clip);
+      var order = ['fieldlines', 'waves', 'cells', 'molecules', 'orbitals',
+                   'nucleus', 'quarks', 'vacuum', 'photons'];
+      for (var i = 0; i < order.length; i++) {
+        var w = frame.weights[order[i]];
+        if (w) this.drawLayer(ctx, frame, order[i], w);
       }
       ctx.restore();
     }
 
-    this.drawReticle(ctx, probe);
-    this.updateChrome(state, probe, element, now);
+    this.drawLayer(ctx, frame, 'harmonics', 1);
+  };
+
+  App.prototype.drawLayer = function (ctx, frame, id, weight) {
+    if (weight < 0.012 || this.disabled[id]) return;
+    var layer = QM.layers.get(id);
+    if (!layer) return;
+    frame.weight = weight;
+    ctx.save();
+    try {
+      layer.draw(ctx, frame);
+    } catch (err) {
+      // One bad layer should cost its own pass, not the rest of the frame.
+      this.disabled[id] = true;
+      if (this['chip_' + id]) this['chip_' + id].classList.remove('on');
+      this.setSourceLabel(LAYER_NAMES[id] + ' layer disabled: ' + err.message);
+      if (window.console) console.error('layer ' + id + ' failed', err);
+    }
+    ctx.restore();
+  };
+
+  /* The measured outline, as a clip path in device pixels. Aspect-corrected
+     coordinates scale to pixels by the frame width on both axes. */
+  App.prototype.objectPath = function (frame) {
+    var seg = this.segment, view = this.view;
+    if (!seg.stats.found) return null;
+    var rays = QM.SEGMENT_RAYS;
+    var path = new Path2D();
+    for (var k = 0; k < rays; k++) {
+      var x = seg.outline[k * 2] * view.w;
+      var y = seg.outline[k * 2 + 1] * view.w;
+      if (k === 0) path.moveTo(x, y); else path.lineTo(x, y);
+    }
+    path.closePath();
+    return path;
   };
 
   /*
-   * The physical image, surrendered gradually. The blur is done by resampling
-   * through a small offscreen canvas rather than with a canvas filter: a
-   * full-frame blur every frame costs more than every overlay combined, and
-   * losing resolution is exactly what going down the ladder means anyway.
+   * Drive the membrane. The dial sets the frequency; how fast the object is
+   * moving and how textured it is set the damping, so a still smooth surface
+   * rings cleanly and a busy one smears -- which is what happens.
    */
-  App.prototype.drawPassthrough = function (ctx, state) {
-    var view = this.view;
-    var depth = state.position / scales.maxPosition;
-    var alpha = U.clamp(1 - depth * 1.55, 0.05, 1);
-    var drew;
+  App.prototype.runResonance = function (state) {
+    var res = this.resonance, seg = this.segment;
+    var n = this.quality > 0.6 ? 128 : 96;
+    if (res.n !== n) { res.allocate(n); res.clear(); }
+    if (!seg.stats.found) { res.insideCells = 0; return; }
 
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    if (alpha <= 0.06) {
-      // Nothing of the image survives at this depth; skip the work entirely.
-      drew = false;
-    } else if (depth < 0.05) {
-      drew = this.source.drawTo(ctx, view.w, view.h);
-    } else {
-      if (!this.blurCanvas) {
-        this.blurCanvas = document.createElement('canvas');
-        this.blurCtx = this.blurCanvas.getContext('2d');
-      }
-      var shrink = 1 + depth * 26;
-      var bw = Math.max(8, Math.round(view.w / shrink));
-      var bh = Math.max(6, Math.round(view.h / shrink));
-      if (this.blurCanvas.width !== bw || this.blurCanvas.height !== bh) {
-        this.blurCanvas.width = bw;
-        this.blurCanvas.height = bh;
-      }
-      this.blurCtx.clearRect(0, 0, bw, bh);
-      drew = this.source.drawTo(this.blurCtx, bw, bh);
-      if (drew) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'low';
-        ctx.drawImage(this.blurCanvas, 0, 0, bw, bh, 0, 0, view.w, view.h);
-      }
-    }
-    ctx.restore();
+    res.setMask(seg, this.lens, this.view.h / this.view.w);
+    if (this.paused) return;
 
-    if (!drew) {
+    var st = seg.stats;
+    var tone = state.position / scales.maxPosition;
+    // Light damping, or the wave decays before it has crossed the plate and
+    // there is no mode to find -- only a blob around the driver. Motion and
+    // texture still blur the figure, just within a usable range.
+    var damping = U.clamp(0.0004 + st.motion * 0.006 + st.texture * 0.0009,
+                          0.0004, 0.003);
+    res.step(tone, damping, 0.9);
+  };
+
+  /* The world outside the aperture: the camera, as it is. */
+  App.prototype.drawWorld = function (ctx) {
+    var view = this.view, lens = this.lens;
+    if (!this.source.drawTo(ctx, view.w, view.h)) {
       ctx.fillStyle = '#07090f';
       ctx.fillRect(0, 0, view.w, view.h);
     }
-    // Everything below the surface is cold and dark; the overlay supplies the light.
-    ctx.fillStyle = 'rgba(4,7,14,' + (depth * 0.62).toFixed(3) + ')';
+    // Just enough fall-off that the lit aperture reads as the subject.
+    var cx = lens.u * view.w, cy = lens.v * view.h;
+    var vignette = ctx.createRadialGradient(
+      cx, cy, lens.r * view.w, cx, cy, Math.max(view.w, view.h) * 0.85);
+    vignette.addColorStop(0, 'rgba(4,6,13,0.10)');
+    vignette.addColorStop(1, 'rgba(4,6,13,0.72)');
+    ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, view.w, view.h);
   };
 
-  App.prototype.drawReticle = function (ctx, probe) {
-    var view = this.view;
-    var x = this.probeUV.u * view.w, y = this.probeUV.v * view.h;
-    var r = 17 * view.dpr;
+  /* The barrel. A rim, the chromatic edge any real lens has, and an arc
+     reporting how close the drive is to a mode of this object. */
+  App.prototype.drawLensChrome = function (ctx) {
+    var view = this.view, lens = this.lens;
+    var cx = lens.u * view.w, cy = lens.v * view.h, r = lens.r * view.w;
+    var lock = this.segment.stats.found ? this.resonance.lock : 0;
+
     ctx.save();
-    ctx.lineWidth = Math.max(1, view.dpr);
-    ctx.strokeStyle = this.probeLocked ? 'rgba(255,214,120,0.95)' : 'rgba(225,240,255,0.7)';
+    ctx.lineWidth = Math.max(1.5, view.dpr * 1.6);
+    ctx.strokeStyle = 'rgba(255,205,125,' + (0.4 + lock * 0.5).toFixed(3) + ')';
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x - r * 1.9, y); ctx.lineTo(x - r * 0.45, y);
-    ctx.moveTo(x + r * 0.45, y); ctx.lineTo(x + r * 1.9, y);
-    ctx.moveTo(x, y - r * 1.9); ctx.lineTo(x, y - r * 0.45);
-    ctx.moveTo(x, y + r * 0.45); ctx.lineTo(x, y + r * 1.9);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = U.wavelengthColor(probe.wavelength, 0.9);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = Math.max(1, view.dpr);
+    ctx.strokeStyle = 'rgba(120,190,255,0.30)';
     ctx.beginPath();
-    ctx.arc(x, y, Math.max(1.5, 2.2 * view.dpr), 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(cx, cy, r - view.dpr * 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,150,190,0.22)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + view.dpr * 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (lock > 0.02) {
+      ctx.lineWidth = Math.max(2, view.dpr * 2.6);
+      ctx.strokeStyle = 'rgba(255,228,160,0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + view.dpr * 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * lock);
+      ctx.stroke();
+    }
     ctx.restore();
   };
 
@@ -514,6 +598,9 @@
       probe: probe,
       element: element,
       state: state,
+      object: this.segment.stats,
+      resonance: this.resonance,
+      lens: this.lens,
       magnification: magnification
     }, now);
 
