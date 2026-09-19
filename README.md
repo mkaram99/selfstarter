@@ -100,7 +100,7 @@ Amazon Payments works great for us, but it may not work out for everyone. If you
 
 There aren't any tests yet. Tests are very welcome!
 
-## Quantum Magnifier
+## Quantum Lens
 
 `public/quantum` holds a self-contained augmented-reality instrument: a lens you
 aim at the world, which finds the object under the aperture, treats that

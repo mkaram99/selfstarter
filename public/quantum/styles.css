@@ -1,4 +1,4 @@
-/* Quantum Magnifier — instrument chrome over a full-bleed camera view. */
+/* Quantum Lens — instrument chrome over a full-bleed camera view. */
 
 :root {
   --ink: #e8f0ff;
@@ -370,7 +370,7 @@ body.panel-hidden #panel { display: none; }
 
 /* ----------------------------------------------------------- overlays */
 
-#intro, #about {
+#intro, #about, #capture {
   position: fixed;
   inset: 0;
   display: flex;
@@ -383,9 +383,9 @@ body.panel-hidden #panel { display: none; }
   transition: opacity 0.6s ease;
 }
 
-#about { background: rgba(4, 6, 12, 0.9); backdrop-filter: blur(8px); }
+#about, #capture { background: rgba(4, 6, 12, 0.9); backdrop-filter: blur(8px); }
 
-#intro.hidden, #about.hidden {
+#intro.hidden, #about.hidden, #capture.hidden {
   opacity: 0;
   pointer-events: none;
 }
@@ -442,7 +442,16 @@ body.panel-hidden #panel { display: none; }
 
 #begin:hover { filter: brightness(1.08); }
 
-#about-close {
+#capture-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 14px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+#about-close, #capture-close {
   position: absolute;
   top: 12px;
   right: 14px;
@@ -503,5 +512,5 @@ body.panel-hidden #panel { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #banner, #panel, #controls, #intro, #about { transition: none; }
+  #banner, #panel, #controls, #intro, #about, #capture { transition: none; }
 }

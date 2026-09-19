@@ -1,4 +1,4 @@
-# Quantum Magnifier
+# Quantum Lens
 
 A lens you hold against the world. Aim it at something and it finds the object
 under the aperture, takes that object's own outline as the boundary of a

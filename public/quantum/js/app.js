@@ -267,7 +267,11 @@
         case 'r': self.lens.u = 0.5; self.lens.v = 0.5; break;
         case '[': self.setAperture(self.lens.r - 0.02); break;
         case ']': self.setAperture(self.lens.r + 0.02); break;
-        case 'Escape': document.getElementById('about').classList.add('hidden'); break;
+        case 'Escape':
+          document.getElementById('about').classList.add('hidden');
+          var cap = document.getElementById('capture');
+          if (cap) cap.classList.add('hidden');
+          break;
         default:
           if (e.key >= '1' && e.key <= '9') self.setTarget(parseInt(e.key, 10) - 1);
       }
@@ -331,18 +335,42 @@
     });
   };
 
+  /*
+   * A scripted download is inert in a sandboxed frame and has never worked
+   * for a data URL on mobile Safari, so the capture is shown instead and the
+   * viewer saves it the way they save any other image.
+   */
   App.prototype.snapshot = function () {
+    var url;
     try {
-      var url = this.canvas.toDataURL('image/png');
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'quantum-magnifier-' + Date.now() + '.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      url = this.canvas.toDataURL('image/png');
     } catch (e) {
-      this.setSourceLabel('snapshot blocked by the browser');
+      this.setSourceLabel('capture blocked by the browser');
+      return;
     }
+    this.showCapture(url);
+  };
+
+  App.prototype.showCapture = function (url) {
+    var sheet = document.getElementById('capture');
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.id = 'capture';
+      sheet.className = 'hidden';
+      sheet.innerHTML =
+        '<div class="sheet">' +
+        '<button id="capture-close" type="button" aria-label="Close">&times;</button>' +
+        '<h2>Capture</h2>' +
+        '<img id="capture-image" alt="Captured frame">' +
+        '<p class="fine dim">Long-press or right-click the image to save it.</p>' +
+        '</div>';
+      document.body.appendChild(sheet);
+      sheet.querySelector('#capture-close').addEventListener('click', function () {
+        sheet.classList.add('hidden');
+      });
+    }
+    document.getElementById('capture-image').src = url;
+    sheet.classList.remove('hidden');
   };
 
   /* --------------------------------------------------------------- frame */
