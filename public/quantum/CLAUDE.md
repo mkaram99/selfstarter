@@ -33,8 +33,8 @@ Both exit non-zero on failure. `smoke` writes to `tools/shots/`. If the sandbox
 ships its own Chromium, point at it with `PLAYWRIGHT_CHROMIUM=/path/to/chrome`.
 
 **Look at the screenshots.** Most of the real bugs in this thing produced a
-perfectly plausible-looking wrong picture and no error at all — see the history
-below.
+perfectly plausible-looking wrong picture and no error at all — see *Things that
+will bite you* below for the ones already paid for.
 
 ## Architecture
 
