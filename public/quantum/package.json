@@ -1,0 +1,14 @@
+{
+  "name": "quantum-lens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A lens you aim at the world: it finds the object under the aperture, treats its outline as the boundary of a vibrating membrane, and draws the standing wave it would carry.",
+  "scripts": {
+    "serve": "node tools/serve.js",
+    "smoke": "node tools/smoke.js",
+    "check": "node tools/check.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
